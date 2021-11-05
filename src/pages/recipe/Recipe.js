@@ -1,14 +1,37 @@
+import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { useFetch } from '../../hooks/useFetch'
 import { useTheme } from '../../hooks/useTheme'
+import { projectFirestore } from '../../firebase/config'
 
 // styles
 import './Recipe.css'
 
 export default function Recipe() {
     const {id} = useParams()
-    const {data: recipe, isPending, error} = useFetch(`http://localhost:3000/recipes/${id}`)
+    const [recipe, setRecipe] = useState(null)
+    const [isPending, setIsPending] = useState(false)
+    const [error, setError] = useState(false)
     const { mode } = useTheme()
+
+    useEffect(() => {
+        setIsPending(true)
+
+        const unsub = projectFirestore.collection('recipes').doc(id).onSnapshot((doc) => {
+            if (doc.exists) {
+                setRecipe(doc.data())
+                setIsPending(false)
+            } else {
+                setError('Could not find that recipe!')
+                setIsPending(false)
+            }
+        }, (err) => {
+            setError(err.message)
+            setIsPending(false)
+        })
+        
+        return () => unsub()
+
+    }, [id])
 
     return (
         <div className={`recipe ${mode}`}>
